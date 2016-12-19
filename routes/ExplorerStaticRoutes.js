@@ -15,10 +15,24 @@ module.exports = class ExplorerRoutes extends Route {
         app.get('/v0/explorers/:ExplorerUuid/explorations', this.getExplorerExplorations);
         app.post('/v0/explorers/:ExplorerUuid/explorations', this.createExplorerExplorations);
         app.get('/v0/explorers/:ExplorerUuid/units', this.getExplorerUnits);
+        app.get('/v0/explorers/:ExplorerUuid/units/sneakpeek', this.getExplorerUnitsSneakPeek);
         app.get('/v0/explorers/:ExplorerUuid/units/:UnitUuid', this.getUnitDetails);
+        app.get('/v0/yolo', this.yolo);
         //app.get('/v0/units/search', this.getUnits);
     }
     
+    yolo(req, res) {
+        super.createResponse(res);
+        
+        let count = parseInt(req.query.count);
+        let limit = parseInt(req.query.limit);
+        let offset = parseInt(req.query.offset);
+        
+        let result = super.createNextPreviousHref(count, limit, offset, "https://ws-andromia-francishamel.c9users.io/v0/yolo");
+        
+        res.status(200);
+        res.send(result);
+    }
     // Méthode pour créer un explorer (un compte)
     createExplorer(req, res) {
         
@@ -186,6 +200,22 @@ module.exports = class ExplorerRoutes extends Route {
         res.status(200).json(units);
     }
     
+    getExplorerUnitsSneakPeek(req, res) {
+        let message = {};
+        message.count = 134;
+        message.next = "https://ws-andromia-francishamel.c9users.io/v0/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/units/sneakpeek?offset=40";
+        message.previous = "https://ws-andromia-francishamel.c9users.io/v0/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/units/sneakpeek?offset=20";
+        let units = [ {     "href": "https://ws-andromia-francishamel.c9users.io/v0/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/units/41ec3797-4d32-4023-bb3c-80197f8045f6",
+        "imageUrl": "http://inoxis-andromiabeta.rhcloud.com/images/units/014.gif",
+        "name": "Munmar"
+        }];
+        
+        message.units = units;
+        
+        super.createResponse(res);
+        res.status(200).json(message);
+    }
+    
     getUnitDetails(req, res) {
         let unit = {
     "affinity": "darkness",
@@ -195,13 +225,11 @@ module.exports = class ExplorerRoutes extends Route {
     "moves": [
         {
             "affinity": 3,
-            "href": "https://ws-andromia-francishamel.c9users.io/v0/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/units/41ec3797-4d32-4023-bb3c-80197f8045f6/moves/8b7b78e3-5ea7-4390-9205-03238119c811",
             "power": 3
         },
         {
             "affinity": 3,
             "generic": 2,
-            "href": "https://ws-andromia-francishamel.c9users.io/v0/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/units/41ec3797-4d32-4023-bb3c-80197f8045f6/moves/52ce95cf-83db-46f5-bf8b-c494ddfc6578",
             "power": 10
         }
     ],

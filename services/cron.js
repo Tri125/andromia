@@ -9,9 +9,14 @@ module.exports.start = () => {
     
     // S1 - inox à chaque 5 minutes
     schedule.scheduleJob('0 */5 * * * *', () => {
-        //TODO: log si erreur
+        
+        // Message d'information
         console.log(new Date() + ' S1 - inox');
+        
+        // Aller chercher la query
         let query = queries.inoxReward();
+        
+        // Effectuer la query
         connexion.query(query);
     });
     
@@ -22,9 +27,8 @@ module.exports.start = () => {
         const MAX_RUNES = 5;    // Maximum de runes à donner
         const NB_RUNES = 12;    // Nombre de type de runes
         
-        //TODO: log si erreur
         console.log(new Date() + ' S2 - runes');
-        //connexion.query("UPDATE ExplorersRunes SET quantite = quantite + FLOOR(RAND(" + _.random(0, 100) + ") * (" + MAX_RUNES + " - " + MIN_RUNES + " + 1) + " + MIN_RUNES + ");");
+        
         let query = queries.selectExplorersID();
         connexion.query(query, (error, rows, fields) => {
             

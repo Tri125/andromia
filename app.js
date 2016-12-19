@@ -1,5 +1,3 @@
-//b5b611eb474dfa40aba37a858f368bd4
-
 const express = require('express');
 const expressJWT = require('express-jwt');
 const bodyParser = require('body-parser');
@@ -26,6 +24,16 @@ new ExplorerRoutes(app);
 
 const ExplorerStaticRoutes = require('./routes/ExplorerStaticRoutes');
 new ExplorerStaticRoutes(app);
+
+//Middleware pour gérer les erreurs de middlewares.
+app.use(function(err, req, res, next) {
+    
+    //Attrape les erreurs provenant de express-jwt.
+    if (err.status === 401) {
+        res.status(401).end();
+        return;
+    }
+});
 
 // Message pour nous informer que le service fonctionne
 app.listen(process.env.PORT || 3000, process.env.IP, function() {

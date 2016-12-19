@@ -11,10 +11,16 @@ const RuneLogic = require('../logic/RuneLogic');
 const runeLogic = new RuneLogic();
 const UnitLogic = require('../logic/UnitLogic');
 const unitLogic = new UnitLogic();
+const ExplorationLogic = require('../logic/ExplorationLogic');
+const explorationLogic = new ExplorationLogic();
 const QueryHelper = require('../helpers/queries');
 const queries = new QueryHelper();
+const utils = require('../helpers/utils');
 
 const async = require('async');
+
+const defaultLimit = 20;
+const defaultOffset = 0;
 
 module.exports = class ExplorerRoutes extends Route {
     
@@ -25,9 +31,28 @@ module.exports = class ExplorerRoutes extends Route {
         app.post('/v1/explorers/login/', this.loginExplorer);
         app.get('/v1/explorers/:ExplorerUuid/runes/', this.getRunes);
         app.get('/v1/explorers/:ExplorerUuid/units/', this.getUnits);
-        app.get('/v1/explorers/:ExplorerUuid/units/:UnitUuid', this.getDetailsUnit);
-        app.post('/v1/explorers/:ExplorerUuid/explorations', expressJwt({secret: process.env.JWT_SECRET}), this.createExplorerExplorations);
+        app.get('/v1/explorers/:ExplorerUuid/units/:GeneratedUnitUuid', this.getDetailsUnit);
+        app.get('/v1/explorers/:ExplorerUuid/', this.getExplorer);
+        app.get('/v1/explorers/:ExplorerUuid/explorations', this.getExplorations);
+        app.post('/v1/explorers/:ExplorerUuid/explorations', this.createExplorerExplorations);
+        
+        app.get('/token/:ExplorerUuid/', expressJwt({secret: process.env.JWT_SECRET}), this.testToken);
     }
+    
+    //TODO: à enlever!!! c'est seulement pour montrer l'implémentation du token
+    testToken(req, res) {
+        
+        super.createResponse(res);
+        
+        if (req.user.uuid != req.params.ExplorerUuid) {
+            res.status(403).end();
+        }
+        
+        else {
+            res.status(200).end();
+        }
+    }
+    
     
     // Méthode pour créer un explorer (un compte)
     createExplorer(req, res) {
@@ -143,11 +168,8 @@ module.exports = class ExplorerRoutes extends Route {
                 // L'explorer n'existe pas
                 if (rows.length === 0) {
                     
-                    // Créer le message d'erreur
-                    let error = super.createError(404, "Explorer non trouvé");
-                    
                     // Retourner le message d'erreur
-                    res.status(404).send(error);
+                    res.status(404).end();
                     return;
                 }
                 
@@ -244,17 +266,23 @@ module.exports = class ExplorerRoutes extends Route {
             }
             
             else {
-                unitLogic.retrieveUnits(req.params.ExplorerUuid, (error, result) => {
+                let limit = parseInt(req.query.limit) || defaultLimit;
+                let offset = parseInt(req.query.offset) || defaultOffset;
+                
+                unitLogic.retrieveUnits(req.params.ExplorerUuid, limit, offset, req.query.q, (error, result) => {
             
+                    // Erreur de requête
                     if (error) {
                         let errorMessage = super.createError(500, "Erreur serveur", error);
                         // Envoyer l'objet d'erreur
                         res.status(500).send(errorMessage);
                         return;
                     }
-            
+                    //TODO: next et previous
                     // Bon résultat
                     else {
+                        let links = super.createNextPreviousHref(result.count, limit, offset, utils.baseUrl + "/v1/explorers/" + req.params.ExplorerUuid + "/units");
+                        for(var x in links) result[x] = links[x];
                         res.status(200).send(result);
                     }
                 });
@@ -265,15 +293,195 @@ module.exports = class ExplorerRoutes extends Route {
     // Méthodes pour avoir les détails d'un unit d'un explorer
     getDetailsUnit(req, res) {
         
-    }
-    
-    createExplorerExplorations(req, res) {
-        //TODO: Tout
-        let exploration = req.body;
-        
+        // Créer la réponse
         super.createResponse(res);
         
-        if (!req.user) {
+        explorerLogic.explorerExists(req.params.ExplorerUuid, (error, result) => {
+            
+            if (error) {
+                let errorMessage = super.createError(500, "Erreur serveur", error);
+                // Envoyer l'objet d'erreur
+                res.status(500).send(errorMessage);
+                return;
+            }
+            
+            else if (result.nombre === 0) {
+                res.status(404).end();
+                return;
+            }
+            
+            else {
+                unitLogic.retrieveDetailsUnit(req.params.ExplorerUuid, req.params.GeneratedUnitUuid, (error, result) => {
+            
+                    if (error) {
+                        let errorMessage = super.createError(500, "Erreur serveur", error);
+                        // Envoyer l'objet d'erreur
+                        res.status(500).send(errorMessage);
+                        return;
+                    }
+                    
+                    else if (result.length === 0) {
+                        res.status(404).end();
+                    }
+            
+                    // Bon résultat
+                    else {
+                        res.status(200).send(result.detailUnit);
+                    }
+                });
+            }
+        });
+    }
+    
+    // Méthode pour avoir les informations d'un explorer
+    getExplorer(req, res) {
+        
+        // Créer la réponse
+        super.createResponse(res);
+        
+        // Vérifier si l'explorer existe
+        explorerLogic.explorerExists(req.params.ExplorerUuid, (error, result) => {
+            
+            // S'il y a une erreur avec la query
+            if (error) {
+                let errorMessage = super.createError(500, "Erreur serveur", error);
+                // Envoyer l'objet d'erreur
+                res.status(500).send(errorMessage);
+                return;
+            }
+            
+            // Si l'explorer n'existe pas
+            else if (result.nombre === 0) {
+                res.status(404).end();
+                return;
+            }
+            
+            // S'il existe
+            else {
+                
+                // Retrieve les informations de l'explorer
+                explorerLogic.retrieveExplorer(req.params.ExplorerUuid, (err, explorer) => {
+                    
+                    // S'il y a une erreur
+                    if (err) {
+                        let errorMessage = super.createError(500, "Erreur serveur", error);
+                        res.status(500).send(errorMessage);
+                        return;
+                    }
+                    
+                    // Si tout est correct
+                    res.status(200).send(explorer);
+                });
+            }
+        });
+    }
+    
+    // Méthode pour avoir les explorations d'un explorer
+    getExplorations(req, res) {
+        
+        // Créer la réponse
+        super.createResponse(res);
+        
+         // Vérifier si l'explorer existe
+        explorerLogic.explorerExists(req.params.ExplorerUuid, (error, result) => {
+            
+            // S'il y a une erreur avec la query
+            if (error) {
+                let errorMessage = super.createError(500, "Erreur serveur", error);
+                // Envoyer l'objet d'erreur
+                res.status(500).send(errorMessage);
+                return;
+            }
+            
+            // Si l'explorer n'existe pas
+            else if (result.nombre === 0) {
+                res.status(404).end();
+                return;
+            }
+            
+            // S'il existe
+            else {
+                let limit = parseInt(req.query.limit) || defaultLimit;
+                let offset = parseInt(req.query.offset) || defaultOffset;
+                // Retrieve les informations de l'explorer
+                explorationLogic.retrieveExplorations(req.params.ExplorerUuid, limit, offset, (err, explorations) => {
+                
+                    // S'il y a une erreur
+                    if (err) {
+                        let errorMessage = super.createError(500, "Erreur serveur", err);
+                        res.status(500).send(errorMessage);
+                        return;
+                    }
+                    
+                    // Si tout est correct
+                    let links = super.createNextPreviousHref(explorations.count, limit, offset, utils.baseUrl + "/v1/explorers/" + req.params.ExplorerUuid + "/explorations");
+                    for(var x in links) explorations[x] = links[x];
+                    res.status(200).send(explorations);
+                });
+            }
+        });
+    }
+    
+    // Méthode pour ajouter une exploration à un explorer
+    createExplorerExplorations(req, res) {
+        
+        // On reçoit l'exploration tel quel du client (il la reçoit du serveur à yannick et il l'envoie à nous)
+        // Il peut y avoir ou pas d'unit
+        // S'il y a un unit, il faut vérifier si l'explorer a assez de runes
+        // S'il en a pas assez, on fait l'insert sans l'unit + on renvoie le corps avec code 412
+        
+        // Stocker l'exploration
+        let exploration = req.body;
+        
+        // Créer la réponse
+        super.createResponse(res);
+        
+        //TODO: TRISTAN ajoute les validations
+        
+        // Regarder si l'explorer existe
+        explorerLogic.explorerExists(req.params.ExplorerUuid, (error, result) => {
+            
+            // S'il y a une erreur avec la query
+            /*if (error) {
+                let errorMessage = super.createError(500, "Erreur serveur", error);
+                // Envoyer l'objet d'erreur
+                res.status(500).send(errorMessage);
+                return;
+            }
+            
+            // Si l'explorer n'existe pas
+            else if (result.nombre === 0) {
+                res.status(404).end();
+                return;
+            }
+            
+            // S'il existe
+            else*/
+            
+            if(true) {
+                
+                let exploration = {
+                    "dateExploration": "2016-12-19T17:16:27.515Z",
+                    "locations": {
+                        "start": "Myth Dranor",
+                        "end": "Bézantur"
+                    }
+                };
+                
+                explorationLogic.insertExploration('1ade618b-b6cc-4fd2-9b6b-57ee1864cbd8', exploration, (err, result) => {
+                    
+                });
+                
+                // Ajouter l'exploration
+                // 1. Insert exploration
+                // 2. Insert runes
+                // 3. Si pas d'erreur, insert units
+                
+                // Dans le callback, on renvoie l'erreur serveur OU le 412 (erreur insert unit) OU le 201
+            }
+        });
+        
+        /*if (!req.user) {
             return res.sendStatus(401);
         }
         
@@ -282,5 +490,20 @@ module.exports = class ExplorerRoutes extends Route {
         
         // Effectuer les validations à partir de l'objet de validation
         let errorValidation = req.validationErrors();
+        
+        // Ici, c'est que les champs ne sont pas valides
+        if (errorValidation) {
+            // Créer l'objet d'erreur
+            let devMessage = [];
+            if (errorValidation) {
+                devMessage = devMessage.concat(errorValidation);
+            }
+                    
+            let error = super.createError(500, "Erreur de validation", devMessage);
+            
+            // Envoyer l'objet d'erreur
+            res.status(500).send(error);
+            return;
+        }*/
     }
 };

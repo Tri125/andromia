@@ -35,4 +35,31 @@ module.exports = class Route {
         
         return error;
     }
+    
+    createNextPreviousHref(count, limit, offset, ressourceUrl) {
+
+        let links = {};
+        
+        if (typeof count != 'number' || count <= 0 || typeof limit != 'number' || limit <= 0 || typeof offset != 'number') {
+            return links;
+        }
+        
+        else {
+            //TODO: Fix lorsque limit est plus grand que offset: 6-3
+            let nextOffset = limit + offset;
+            let previousOffset = offset - limit;
+            
+            if (previousOffset >= 0) {
+                links.previous = ressourceUrl + "?limit=" + limit + "&offset=" + previousOffset;
+            }
+            
+            if (nextOffset < count) {
+                links.next = ressourceUrl + "?limit=" + limit + "&offset=" + nextOffset;
+            }
+            
+            return links;
+        }
+    }
+    
+    
 };

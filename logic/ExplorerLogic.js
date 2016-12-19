@@ -11,12 +11,15 @@ const locationLogic = new LocationLogic();
 const UnitLogic = require('./UnitLogic');
 const unitLogic = new UnitLogic();
 
+const ExplorationLogic = require('./ExplorationLogic');
+const explorationLogic = new ExplorationLogic();
+
 module.exports = class ExplorerLogic {
     
     retrieveExplorer(uuidExplorer, callback) {
         
         // Créer la query
-        let query = "SELECT nameExplorer AS displayName, email, inox FROM Explorers WHERE uuidExplorer = '" + uuidExplorer + "';";
+        let query = "SELECT uuidExplorer, nameExplorer AS displayName, email, inox FROM Explorers WHERE uuidExplorer = '" + uuidExplorer + "';";
         
         // Effectuer la requête
         connexion.query(query, (error, rows, fields) => {
@@ -29,8 +32,8 @@ module.exports = class ExplorerLogic {
             async.parallel({
                 runes:(callback) => {
                     // Aller chercher les runes d'un explorer
-                    runeLogic.retrieveRunes(uuidExplorer, (err, result) => {
-                        callback(err, result.runes);
+                    runeLogic.retrieveRunes(uuidExplorer, (err, runes) => {
+                        callback(err, runes);
                     });
                 },
                 location:(callback) => {
@@ -41,7 +44,13 @@ module.exports = class ExplorerLogic {
                 },
                 units:(callback) => {
                     // Aller chercher les units d'un explorer
-                    unitLogic.retrieveUnits(uuidExplorer, (err, result) => {
+                    unitLogic.retrieveUnitsHref(uuidExplorer, (err, units) => {
+                       callback(err, units);
+                    });
+                },
+                explorations:(callback) => {
+                    // Aller chercher les explorations d'un explorer
+                    explorationLogic.retrieveExplorationsHref(uuidExplorer, (err, result) => {
                        callback(err, result);
                     });
                 }
@@ -52,6 +61,9 @@ module.exports = class ExplorerLogic {
                 explorer.runes = results.runes;
                 explorer.location = results.location;
                 explorer.units = results.units;
+                explorer.explorations = results.explorations;
+                
+                this.linking(explorer);
                 
                 // On retourne les erreurs et l'explorer
                 callback(err, explorer);
@@ -59,7 +71,9 @@ module.exports = class ExplorerLogic {
         });
     }
     
+    // Méthode pour vérifier si un explorer existe
     explorerExists(uuidExplorer, callback) {
+        
         // Créer la query
         let query = "SELECT COUNT(*) AS nombre FROM Explorers WHERE uuidExplorer = '" + uuidExplorer + "';";
         
@@ -76,9 +90,12 @@ module.exports = class ExplorerLogic {
         });
     }
     
+    // Méthode pour faire le linking
     linking(explorer) {
-        explorer.href = utils.baseUrl + "/explorers/" + explorer.uuidExplorer;
         
+        explorer.href = utils.baseUrl + "/v1/explorers/" + explorer.uuidExplorer;
+        
+        // Effacer les champs non désirables
         delete explorer.uuidExplorer;
         delete explorer.idExplorer;
         delete explorer.passwordExplorer;
