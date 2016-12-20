@@ -9,7 +9,7 @@ const logInfo = require('../helpers/logger').info;
 module.exports.start = () => {
     
     // S1 - inox à chaque 5 minutes
-    schedule.scheduleJob('* * * * * *', () => {
+    schedule.scheduleJob('0 */5 * * * *', () => {
         
         // Log d'information
         logInfo.info('Début d\'exécution du cronJob S1 - inox');
