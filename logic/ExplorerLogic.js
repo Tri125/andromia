@@ -93,7 +93,7 @@ module.exports = class ExplorerLogic {
     // Méthode pour faire le linking
     linking(explorer) {
         
-        explorer.href = utils.baseUrl + "/v1/explorers/" + explorer.uuidExplorer;
+        explorer.href = utils.releaseUrl + "/explorers/" + explorer.uuidExplorer;
         
         // Effacer les champs non désirables
         delete explorer.uuidExplorer;

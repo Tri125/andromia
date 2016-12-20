@@ -1,6 +1,7 @@
 module.exports = {
     version:"1.0",
-    baseUrl:"https://ws-andromia-francishamel.c9users.io"
+    baseUrl:"https://ws-andromia-francishamel.c9users.io",
+    releaseUrl:"https://ws-andromia-francishamel.c9users.io/v1"
 };
 
 //Fonction format rajouté aux types string pour faire du formattage de string.

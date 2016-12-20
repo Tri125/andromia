@@ -77,7 +77,7 @@ module.exports = class LocationLogic {
     
     // Méthode pour faire le linking
     linking(location) {
-        location.href = utils.baseUrl + "/v1/locations/" + location.uuid;
+        location.href = utils.releaseUrl + "/locations/" + location.uuid;
         delete location.uuid;
     }
 };

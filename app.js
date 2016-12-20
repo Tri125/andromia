@@ -8,9 +8,6 @@ const expressValidator = require('express-validator');
 const dotenv = require('dotenv').config();
 
 const app = express();
-/*app.use(expressJWT({secret: process.env.JWT_SECRET})
-    .unless({path:['/v0/*', '/explorers/', '/explorers/login']}));  // TODO: vérifier les unless + ajouter une regex (/ optionnel à la fin)*/
-
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -19,23 +16,24 @@ app.use(expressValidator());
 // Démarrer les cron jobs du serveur (inox + runes)
 jobs.start();
 
-const ExplorerRoutes = require('./routes/ExplorerRoutes');
+//Route statique pour avoir servir des fichiers statiques tel que les images des runes.
+app.use('/static', express.static(__dirname + '/public'));
+
+const ExplorerRoutes = require('./routes/v1/ExplorerRoutes');
 new ExplorerRoutes(app);
 
-const ExplorerStaticRoutes = require('./routes/ExplorerStaticRoutes');
-new ExplorerStaticRoutes(app);
 
 //Middleware pour gérer les erreurs de middlewares.
 app.use(function(err, req, res, next) {
     
     //Attrape les erreurs provenant de express-jwt.
+    //Erreur de token (non présent, format incorrect ou invalide)
     if (err.status === 401) {
         res.status(401).end();
-        return;
     }
 });
 
 // Message pour nous informer que le service fonctionne
 app.listen(process.env.PORT || 3000, process.env.IP, function() {
-    console.log('Web Service Andromia Is Running...');
+    console.log('Web Services Andromia Is Running...');
 });

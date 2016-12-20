@@ -1,3 +1,5 @@
+//Schema de validation express-validator pourr la création d'une exploration.
+
 module.exports = class ExplorationValidator {
     
   static Create() {
@@ -10,9 +12,13 @@ module.exports = class ExplorationValidator {
             notEmpty: true,
             errorMessage: 'locations requis.'
         },
-        'runes': {
+        'locations.start': {
             notEmpty: true,
-            errorMessage: 'runes requis.'
+            errorMessage: 'locations start requis.'
+        },
+        'locations.end': {
+            notEmpty: true,
+            errorMessage: 'locations end requis.'
         }
     };
   }

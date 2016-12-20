@@ -1,4 +1,4 @@
-// Contient les règles de validations pour un objet Explorer
+// Contient les règles de validations pour un objet Explorer selon express-validator.
 
 module.exports = class ExplorerValidator {
   static Create() {

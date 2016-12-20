@@ -1,21 +1,21 @@
-const Route = require('../core/Route');
-const connexion = require('../helpers/database');
+const Route = require('../../core/Route');
+const connexion = require('../../helpers/database');
 const jwt = require('jsonwebtoken');
 const expressJwt = require('express-jwt');
-const validationExplorer = require('../validations/Explorer');
-const validationExploration = require('../validations/Exploration');
+const validationExplorer = require('../../validations/Explorer');
+const validationExploration = require('../../validations/Exploration');
 const uuid = require('node-uuid');
-const ExplorerLogic = require('../logic/ExplorerLogic');
+const ExplorerLogic = require('../../logic/ExplorerLogic');
 const explorerLogic = new ExplorerLogic();
-const RuneLogic = require('../logic/RuneLogic');
+const RuneLogic = require('../../logic/RuneLogic');
 const runeLogic = new RuneLogic();
-const UnitLogic = require('../logic/UnitLogic');
+const UnitLogic = require('../../logic/UnitLogic');
 const unitLogic = new UnitLogic();
-const ExplorationLogic = require('../logic/ExplorationLogic');
+const ExplorationLogic = require('../../logic/ExplorationLogic');
 const explorationLogic = new ExplorationLogic();
-const QueryHelper = require('../helpers/queries');
+const QueryHelper = require('../../helpers/queries');
 const queries = new QueryHelper();
-const utils = require('../helpers/utils');
+const utils = require('../../helpers/utils');
 
 const async = require('async');
 
@@ -29,30 +29,13 @@ module.exports = class ExplorerRoutes extends Route {
         super(app);
         app.post('/v1/explorers/', this.createExplorer);
         app.post('/v1/explorers/login/', this.loginExplorer);
-        app.get('/v1/explorers/:ExplorerUuid/runes/', this.getRunes);
-        app.get('/v1/explorers/:ExplorerUuid/units/', this.getUnits);
-        app.get('/v1/explorers/:ExplorerUuid/units/:GeneratedUnitUuid', this.getDetailsUnit);
-        app.get('/v1/explorers/:ExplorerUuid/', this.getExplorer);
-        app.get('/v1/explorers/:ExplorerUuid/explorations', this.getExplorations);
-        app.post('/v1/explorers/:ExplorerUuid/explorations', this.createExplorerExplorations);
-        
-        app.get('/token/:ExplorerUuid/', expressJwt({secret: process.env.JWT_SECRET}), this.testToken);
+        app.get('/v1/explorers/:ExplorerUuid/runes/', expressJwt({secret: process.env.JWT_SECRET}), this.getRunes);
+        app.get('/v1/explorers/:ExplorerUuid/units/', expressJwt({secret: process.env.JWT_SECRET}), this.getUnits);
+        app.get('/v1/explorers/:ExplorerUuid/units/:GeneratedUnitUuid', expressJwt({secret: process.env.JWT_SECRET}), this.getDetailsUnit);
+        app.get('/v1/explorers/:ExplorerUuid/', expressJwt({secret: process.env.JWT_SECRET}), this.getExplorer);
+        app.get('/v1/explorers/:ExplorerUuid/explorations', expressJwt({secret: process.env.JWT_SECRET}), this.getExplorations);
+        app.post('/v1/explorers/:ExplorerUuid/explorations', expressJwt({secret: process.env.JWT_SECRET}), this.createExplorerExplorations);
     }
-    
-    //TODO: à enlever!!! c'est seulement pour montrer l'implémentation du token
-    testToken(req, res) {
-        
-        super.createResponse(res);
-        
-        if (req.user.uuid != req.params.ExplorerUuid) {
-            res.status(403).end();
-        }
-        
-        else {
-            res.status(200).end();
-        }
-    }
-    
     
     // Méthode pour créer un explorer (un compte)
     createExplorer(req, res) {
@@ -66,6 +49,7 @@ module.exports = class ExplorerRoutes extends Route {
         
         // Effectuer les validations à partir de l'objet de validation
         let errorValidation = req.validationErrors();
+        //Contient une query pour valider si oui ou non le display name et l'email est déjà utilisé.
         let queryUnique = queries.ExplorerUnique(explorer.displayName, explorer.email);
 
         connexion.query(queryUnique, (errorUnique, rowsUnique, fieldsUnique) => {
@@ -76,12 +60,17 @@ module.exports = class ExplorerRoutes extends Route {
             } else {
                 let uniqueError = [];
                 //TODO: Moins hardcoder cette partie
+                
+                //displayName vaut 1 s'il est déjà présent, donc pas unique.
                 if (rowsUnique[0].displayName === 1)
                 {
+                    //Crée un message d'erreur de validation et le rajoute dans l'array uniqueError.
                     uniqueError.push(super.createValidationError("displayName", "displayName déjà utilisé", explorer.displayName));
                 }
+                //email vaut 1 s'il est déjà présent, donc pas unique.
                 if (rowsUnique[0].email === 1)
                 {
+                    //Crée un message d'erreur de validation et le rajoute dans l'array uniqueError.
                     uniqueError.push(super.createValidationError("email", "email déjà utilisé", explorer.email));
                 }
                 
@@ -89,18 +78,23 @@ module.exports = class ExplorerRoutes extends Route {
                 if (errorValidation || uniqueError.length != 0) {
                     // Créer l'objet d'erreur
                     let devMessage = [];
+                    
+                    //Rajoute les erreurs dans un array commun.
                     if (errorValidation) {
                         devMessage = devMessage.concat(errorValidation);
                     }
                     if (uniqueError) {
                         devMessage = devMessage.concat(uniqueError);
                     }
+                    
+                    //Crée le message d'erreur pour le client.
                     let error = super.createError(500, "Erreur de validation", devMessage);
             
                     // Envoyer l'objet d'erreur
                     res.status(500).send(error);
                     return;
                 } else {
+                    //Crée un uuid.
                     let uuidExplorer = uuid.v4();
 
                     // Construire la requête
@@ -192,6 +186,7 @@ module.exports = class ExplorerRoutes extends Route {
                         }
                         
                         result.explorer = explorer;
+                        //Crée le json web token.
                         result.token = jwt.sign({email:explorer.email, uuid:uuid}, process.env.JWT_SECRET);
                         res.status(201).send(result);
                     });
@@ -206,6 +201,15 @@ module.exports = class ExplorerRoutes extends Route {
         // Créer la réponse
         super.createResponse(res);
         
+        //Vérifie si nos politiques de sécurité donne accès à la ressource.
+        let isAllowed = super.EnforceSecurityPolicy(res, req.params.ExplorerUuid, req.user);
+        
+        if (!isAllowed) {
+            //EnforceSecurityPolicy envoie déjà la réponse.
+            return;
+        }
+        
+        //Requête pour savoir si l'explorer existe.
         explorerLogic.explorerExists(req.params.ExplorerUuid, (error, result) => {
             
             if (error) {
@@ -215,6 +219,7 @@ module.exports = class ExplorerRoutes extends Route {
                 return;
             }
             
+            //N'existe pas.
             else if (result.nombre === 0) {
                 res.status(404).end();
                 return;
@@ -230,7 +235,7 @@ module.exports = class ExplorerRoutes extends Route {
                         res.status(500).send(errorMessage);
                         return;
                     }
-            
+                    //N'existe pas.
                     else if (result.length === 0) {
                         res.status(404).end();
                         return;
@@ -250,6 +255,14 @@ module.exports = class ExplorerRoutes extends Route {
         
         // Créer la réponse
         super.createResponse(res);
+        
+        //Fonction pour enforcer nos politiques de sécurités.
+        let isAllowed = super.EnforceSecurityPolicy(res, req.params.ExplorerUuid, req.user);
+        
+        if (!isAllowed) {
+            //EnforceSecurityPolicy s'occupe déjà de la réponse.
+            return;
+        }
         
         explorerLogic.explorerExists(req.params.ExplorerUuid, (error, result) => {
             
@@ -278,10 +291,9 @@ module.exports = class ExplorerRoutes extends Route {
                         res.status(500).send(errorMessage);
                         return;
                     }
-                    //TODO: next et previous
                     // Bon résultat
                     else {
-                        let links = super.createNextPreviousHref(result.count, limit, offset, utils.baseUrl + "/v1/explorers/" + req.params.ExplorerUuid + "/units");
+                        let links = super.createNextPreviousHref(result.count, limit, offset, utils.releaseUrl + "/explorers/" + req.params.ExplorerUuid + "/units");
                         for(var x in links) result[x] = links[x];
                         res.status(200).send(result);
                     }
@@ -295,6 +307,12 @@ module.exports = class ExplorerRoutes extends Route {
         
         // Créer la réponse
         super.createResponse(res);
+        
+        let isAllowed = super.EnforceSecurityPolicy(res, req.params.ExplorerUuid, req.user);
+        
+        if (!isAllowed) {
+            return;
+        }
         
         explorerLogic.explorerExists(req.params.ExplorerUuid, (error, result) => {
             
@@ -339,6 +357,12 @@ module.exports = class ExplorerRoutes extends Route {
         // Créer la réponse
         super.createResponse(res);
         
+        let isAllowed = super.EnforceSecurityPolicy(res, req.params.ExplorerUuid, req.user);
+        
+        if (!isAllowed) {
+            return;
+        }
+        
         // Vérifier si l'explorer existe
         explorerLogic.explorerExists(req.params.ExplorerUuid, (error, result) => {
             
@@ -382,6 +406,12 @@ module.exports = class ExplorerRoutes extends Route {
         // Créer la réponse
         super.createResponse(res);
         
+        let isAllowed = super.EnforceSecurityPolicy(res, req.params.ExplorerUuid, req.user);
+        
+        if (!isAllowed) {
+            return;
+        }
+        
          // Vérifier si l'explorer existe
         explorerLogic.explorerExists(req.params.ExplorerUuid, (error, result) => {
             
@@ -414,7 +444,7 @@ module.exports = class ExplorerRoutes extends Route {
                     }
                     
                     // Si tout est correct
-                    let links = super.createNextPreviousHref(explorations.count, limit, offset, utils.baseUrl + "/v1/explorers/" + req.params.ExplorerUuid + "/explorations");
+                    let links = super.createNextPreviousHref(explorations.count, limit, offset, utils.releaseUrl + "/explorers/" + req.params.ExplorerUuid + "/explorations");
                     for(var x in links) explorations[x] = links[x];
                     res.status(200).send(explorations);
                 });
@@ -425,24 +455,37 @@ module.exports = class ExplorerRoutes extends Route {
     // Méthode pour ajouter une exploration à un explorer
     createExplorerExplorations(req, res) {
         
-        // On reçoit l'exploration tel quel du client (il la reçoit du serveur à yannick et il l'envoie à nous)
-        // Il peut y avoir ou pas d'unit
-        // S'il y a un unit, il faut vérifier si l'explorer a assez de runes
-        // S'il en a pas assez, on fait l'insert sans l'unit + on renvoie le corps avec code 412
-        
         // Stocker l'exploration
         let exploration = req.body;
         
         // Créer la réponse
         super.createResponse(res);
         
-        //TODO: TRISTAN ajoute les validations
+        let isAllowed = super.EnforceSecurityPolicy(res, req.params.ExplorerUuid, req.user);
+        
+        if (!isAllowed) {
+            return;
+        }
+        
+        // Créer l'objet de validation
+        req.checkBody(validationExploration.Create());
+        
+        // Effectuer les validations à partir de l'objet de validation
+        let erreurValidation = req.validationErrors();
+        
+        if (erreurValidation) {
+            let error = super.createError(500, "Erreur de validation", erreurValidation);
+            
+            // Envoyer l'objet d'erreur
+            res.status(500).send(error);
+            return;            
+        }
         
         // Regarder si l'explorer existe
         explorerLogic.explorerExists(req.params.ExplorerUuid, (error, result) => {
             
             // S'il y a une erreur avec la query
-            /*if (error) {
+            if (error) {
                 let errorMessage = super.createError(500, "Erreur serveur", error);
                 // Envoyer l'objet d'erreur
                 res.status(500).send(errorMessage);
@@ -456,54 +499,73 @@ module.exports = class ExplorerRoutes extends Route {
             }
             
             // S'il existe
-            else*/
-            
-            if(true) {
+            else {
                 
-                let exploration = {
-                    "dateExploration": "2016-12-19T17:16:27.515Z",
-                    "locations": {
-                        "start": "Myth Dranor",
-                        "end": "Bézantur"
+                async.series({
+                    // Ajouter l'exploration
+                    exploration: (callback) => {
+                        explorationLogic.insertExploration(req.params.ExplorerUuid, exploration, (err, result) => {
+                            callback(err, result);
+                        });
+                    },
+                    // Ajouter le unit
+                    unit: (callback) => {
+                        unitLogic.insertGeneratedUnit(req.params.ExplorerUuid, exploration.unit, (err, result) => {
+                            callback(err, result);
+                        });
+                    },
+                    // Ajouter les runes
+                    runes: (callback) => {
+                        
+                        // Pas de runes dans l'exploration
+                        if (exploration.runes === null || Object.keys(exploration.runes).length === 0 && exploration.runes.constructor === Object) {
+                            callback(null, null);
+                        }
+                        
+                        // Insert les runes
+                        else {
+                            runeLogic.updateRunes(req.params.ExplorerUuid, exploration.runes, true, (error) => {
+                                callback(error, 'ok');
+                            });
+                        }
                     }
-                };
-                
-                explorationLogic.insertExploration('1ade618b-b6cc-4fd2-9b6b-57ee1864cbd8', exploration, (err, result) => {
+                }, (err, results) => {
                     
+                    // S'il y a une erreur...
+                    if (err !== null) {
+                        let errorComplete = super.createError(500, "Erreur serveur", err);
+                        res.status(500).send(errorComplete);
+                        return;
+                    }
+                    
+                    else {
+                        
+                        // Construire l'objet
+                        let result = results.exploration;
+                        
+                        // Il y a des runes...
+                        if (results.runes === 'ok') {
+                            result.runes = exploration.runes;
+                        }
+                        
+                        // Erreur duplicate unit OU aucun unit
+                        if (results.unit === 1062 || exploration.unit === null || Object.keys(exploration.unit).length === 0 && exploration.unit.constructor === Object) {
+                            res.status(201).send(result);   // on renvoie tout sauf le unit
+                        }
+                        
+                        // erreur pas assez de runes
+                        else if (results.unit === false) {
+                            res.status(412).send(result);
+                        }
+                        
+                        // Il y a un unit
+                        else {
+                            result.unit = results.unit;
+                            res.status(201).send(result);
+                        }
+                    }
                 });
-                
-                // Ajouter l'exploration
-                // 1. Insert exploration
-                // 2. Insert runes
-                // 3. Si pas d'erreur, insert units
-                
-                // Dans le callback, on renvoie l'erreur serveur OU le 412 (erreur insert unit) OU le 201
             }
         });
-        
-        /*if (!req.user) {
-            return res.sendStatus(401);
-        }
-        
-        // Créer l'objet de validation
-        req.checkBody(validationExploration.Create());
-        
-        // Effectuer les validations à partir de l'objet de validation
-        let errorValidation = req.validationErrors();
-        
-        // Ici, c'est que les champs ne sont pas valides
-        if (errorValidation) {
-            // Créer l'objet d'erreur
-            let devMessage = [];
-            if (errorValidation) {
-                devMessage = devMessage.concat(errorValidation);
-            }
-                    
-            let error = super.createError(500, "Erreur de validation", devMessage);
-            
-            // Envoyer l'objet d'erreur
-            res.status(500).send(error);
-            return;
-        }*/
     }
 };

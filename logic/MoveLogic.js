@@ -1,6 +1,6 @@
 const connexion = require('../helpers/database');
 const async = require('async');
-const utils = require('../helpers/utils');
+const uuid = require('node-uuid');
 
 module.exports = class MoveLogic {
     
@@ -24,6 +24,35 @@ module.exports = class MoveLogic {
             }, () => {
                 callback(error, rows);
             });
+        });
+    }
+    
+    // Méthode pour insérer un move
+    insertOneMove(uuidGeneratedUnit, move, callback) {
+        
+        // Builder la query
+        let query = "INSERT INTO Moves (idGeneratedUnit, uuidMove, affinityCost, genericCost, power) VALUES ";
+        query += "((SELECT idGeneratedUnit FROM GeneratedUnits WHERE uuidGeneratedUnit = ?), ?, ?, ?, ?)";
+        
+        // Effectuer la query
+        connexion.query(query, [uuidGeneratedUnit, uuid.v4(), move.affinity, move.generic, move.power], (error, rows, fields) => {
+            callback(error);
+        });
+    }
+    
+    // Méthode pour insérer des moves
+    insertMoves(uuidGeneratedUnit, moves, callback) {
+        
+        // Insérer les moves de façon async
+        async.each(moves, (move, callback) => {
+            
+            // Insérer le move
+            this.insertOneMove(uuidGeneratedUnit, move, (err) => {
+                callback(err);
+            });
+        },
+        (err) => {
+            callback(err);
         });
     }
 };
