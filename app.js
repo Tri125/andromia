@@ -2,7 +2,7 @@ const express = require('express');
 const expressJWT = require('express-jwt');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const jobs = require('./services/cron');
+const cronJob = require('./services/cron');
 const expressValidator = require('express-validator');
 
 const dotenv = require('dotenv').config();
@@ -14,7 +14,7 @@ app.use(bodyParser.json());
 app.use(expressValidator());
 
 // Démarrer les cron jobs du serveur (inox + runes)
-jobs.start();
+cronJob.start();
 
 //Route statique pour avoir servir des fichiers statiques tel que les images des runes.
 app.use('/static', express.static(__dirname + '/public'));

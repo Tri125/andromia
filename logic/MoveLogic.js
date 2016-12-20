@@ -1,6 +1,6 @@
 const connexion = require('../helpers/database');
 const async = require('async');
-const uuid = require('node-uuid');
+const uuid = require('uuid');
 
 module.exports = class MoveLogic {
     

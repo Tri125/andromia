@@ -1,23 +1,29 @@
 const Route = require('../../core/Route');
 const connexion = require('../../helpers/database');
-const jwt = require('jsonwebtoken');
-const expressJwt = require('express-jwt');
-const validationExplorer = require('../../validations/Explorer');
-const validationExploration = require('../../validations/Exploration');
-const uuid = require('node-uuid');
-const ExplorerLogic = require('../../logic/ExplorerLogic');
-const explorerLogic = new ExplorerLogic();
-const RuneLogic = require('../../logic/RuneLogic');
-const runeLogic = new RuneLogic();
-const UnitLogic = require('../../logic/UnitLogic');
-const unitLogic = new UnitLogic();
-const ExplorationLogic = require('../../logic/ExplorationLogic');
-const explorationLogic = new ExplorationLogic();
-const QueryHelper = require('../../helpers/queries');
-const queries = new QueryHelper();
 const utils = require('../../helpers/utils');
 
 const async = require('async');
+const jwt = require('jsonwebtoken');
+const expressJwt = require('express-jwt');
+const uuid = require('uuid');
+
+const validationExplorer = require('../../validations/Explorer');
+const validationExploration = require('../../validations/Exploration');
+
+const ExplorerLogic = require('../../logic/ExplorerLogic');
+const explorerLogic = new ExplorerLogic();
+
+const RuneLogic = require('../../logic/RuneLogic');
+const runeLogic = new RuneLogic();
+
+const UnitLogic = require('../../logic/UnitLogic');
+const unitLogic = new UnitLogic();
+
+const ExplorationLogic = require('../../logic/ExplorationLogic');
+const explorationLogic = new ExplorationLogic();
+
+const QueryHelper = require('../../helpers/queries');
+const queries = new QueryHelper();
 
 const defaultLimit = 20;
 const defaultOffset = 0;
@@ -279,8 +285,10 @@ module.exports = class ExplorerRoutes extends Route {
             }
             
             else {
-                let limit = parseInt(req.query.limit) || defaultLimit;
-                let offset = parseInt(req.query.offset) || defaultOffset;
+                
+                //Parse en int dans le système base 10 la valeur des paramètres.
+                let limit = parseInt(req.query.limit, 10) || defaultLimit;
+                let offset = parseInt(req.query.offset, 10) || defaultOffset;
                 
                 unitLogic.retrieveUnits(req.params.ExplorerUuid, limit, offset, req.query.q, (error, result) => {
             
@@ -294,6 +302,8 @@ module.exports = class ExplorerRoutes extends Route {
                     // Bon résultat
                     else {
                         let links = super.createNextPreviousHref(result.count, limit, offset, utils.releaseUrl + "/explorers/" + req.params.ExplorerUuid + "/units");
+                        //Rajoute les champs de l'objet json links dans result. L'objet contient un champs next et previous
+                        //contenant les liens next et previous pour la pagination.
                         for(var x in links) result[x] = links[x];
                         res.status(200).send(result);
                     }
@@ -311,6 +321,7 @@ module.exports = class ExplorerRoutes extends Route {
         let isAllowed = super.EnforceSecurityPolicy(res, req.params.ExplorerUuid, req.user);
         
         if (!isAllowed) {
+            //EnforceSecurityPolicy envoie la réponse au client.
             return;
         }
         
@@ -338,6 +349,7 @@ module.exports = class ExplorerRoutes extends Route {
                         return;
                     }
                     
+                    //N'existe pas.
                     else if (result.length === 0) {
                         res.status(404).end();
                     }
@@ -360,6 +372,7 @@ module.exports = class ExplorerRoutes extends Route {
         let isAllowed = super.EnforceSecurityPolicy(res, req.params.ExplorerUuid, req.user);
         
         if (!isAllowed) {
+            //EnforceSecurityPolicy envoie la réponse au client.
             return;
         }
         
@@ -409,6 +422,7 @@ module.exports = class ExplorerRoutes extends Route {
         let isAllowed = super.EnforceSecurityPolicy(res, req.params.ExplorerUuid, req.user);
         
         if (!isAllowed) {
+            //EnforceSecurityPolicy renvoie la réponse au client.
             return;
         }
         
@@ -431,8 +445,9 @@ module.exports = class ExplorerRoutes extends Route {
             
             // S'il existe
             else {
-                let limit = parseInt(req.query.limit) || defaultLimit;
-                let offset = parseInt(req.query.offset) || defaultOffset;
+                //Parse en int dans le système base 10 la valeur des paramètres.
+                let limit = parseInt(req.query.limit, 10) || defaultLimit;
+                let offset = parseInt(req.query.offset, 10) || defaultOffset;
                 // Retrieve les informations de l'explorer
                 explorationLogic.retrieveExplorations(req.params.ExplorerUuid, limit, offset, (err, explorations) => {
                 
@@ -445,6 +460,8 @@ module.exports = class ExplorerRoutes extends Route {
                     
                     // Si tout est correct
                     let links = super.createNextPreviousHref(explorations.count, limit, offset, utils.releaseUrl + "/explorers/" + req.params.ExplorerUuid + "/explorations");
+                    //Rajoute les champs de l'objet json links dans result. L'objet contient un champs next et previous
+                    //contenant les liens next et previous pour la pagination.
                     for(var x in links) explorations[x] = links[x];
                     res.status(200).send(explorations);
                 });
@@ -464,6 +481,7 @@ module.exports = class ExplorerRoutes extends Route {
         let isAllowed = super.EnforceSecurityPolicy(res, req.params.ExplorerUuid, req.user);
         
         if (!isAllowed) {
+            //EnforceSecurityPolicy envoie la réponse au client.
             return;
         }
         

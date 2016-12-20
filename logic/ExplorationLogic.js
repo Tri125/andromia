@@ -1,7 +1,7 @@
 const connexion = require('../helpers/database');
 const utils = require('../helpers/utils');
 const async = require('async');
-const uuid = require('node-uuid');
+const uuid = require('uuid');
 
 const LocationLogic = require('./LocationLogic');
 const locationLogic = new LocationLogic();
