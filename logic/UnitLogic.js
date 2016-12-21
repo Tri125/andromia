@@ -115,7 +115,7 @@ module.exports = class UnitLogic {
         // Exécuter la query (si l'unit existe déjà, on s'en fout)
         connexion.query(query, [unit.name, unit.reflect, unit.life, unit.speed, unit.imageUrl], (error, rows, fields) => {
             
-            if (error.errno === 1062) {
+            if (error !== null && error.errno === 1062) {
                 error = null;
             }
             
@@ -196,7 +196,7 @@ module.exports = class UnitLogic {
                         // Ici, on va chercher les détails du generated unit
                         else {
                             this.retrieveDetailsUnit(uuidExplorer, unit.uuid, (error, result) => {
-                                callback(error, result);
+                                callback(error, result.detailUnit);
                             });
                         }
                     });
