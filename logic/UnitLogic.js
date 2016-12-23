@@ -127,7 +127,11 @@ module.exports = class UnitLogic {
     insertGeneratedUnit(uuidExplorer, unit, callback) {
         
         // Si l'unit est null ou vide
-        if (unit === null || Object.keys(unit).length === 0 && unit.constructor === Object) {
+        if (typeof unit === "undefined") {
+            callback(null, null);
+        }
+        
+        else if (Object.keys(unit).length === 0 && unit.constructor === Object) {
             callback(null, null);
         }
         

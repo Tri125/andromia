@@ -536,7 +536,11 @@ module.exports = class ExplorerRoutes extends Route {
                     runes: (callback) => {
                         
                         // Pas de runes dans l'exploration
-                        if (exploration.runes === null || Object.keys(exploration.runes).length === 0 && exploration.runes.constructor === Object) {
+                        if (typeof exploration.runes === "undefined") {
+                            callback(null, null);
+                        }
+                        
+                        else if (Object.keys(exploration.runes).length === 0 && exploration.runes.constructor === Object) {
                             callback(null, null);
                         }
                         
