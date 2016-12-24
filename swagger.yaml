@@ -1,0 +1,726 @@
+# this is an example of the Uber API
+# as a demonstration of an API spec in YAML
+swagger: '2.0'
+info:
+  title: Andromia API
+  description: API du jeu Andromia
+  version: "1.0.0"
+# the domain of the service
+host: ws-andromia-francishamel.c9users.io
+# array of all schemes that your API supports
+schemes:
+  - https
+# will be prefixed to all paths
+basePath: /v1
+produces:
+  - application/json
+securityDefinitions:
+  ExplorerSecurity:
+    type: apiKey
+    name: Authorization
+    description: Token d'authentification pour un explorer.
+    in: header
+paths:
+  /explorers:
+    post:
+      summary: Création d'un explorer.
+      description: |
+        Le endpoint permet la création d'un explorer.
+      parameters:
+        - name: body
+          in: body
+          description: Payload contenant les informations nécessaire pour créer un explorer.
+          required: true
+          schema:
+            $ref: '#/definitions/ExplorerCreate'
+      tags:
+        - Explorers
+      responses:
+        201:
+          description: Created
+        404:
+          description: Not Found
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+  /explorers/login:
+    post:
+      summary: Connexion à un compte.
+      description: Connexion à un compte explorer. La requête renvois un [JSON Web Token](https://jwt.io/).
+      parameters:
+        - name: body
+          in: body
+          description: Payload contenant les informations nécessaire pour s'authentifier à un explorer.
+          required: true
+          schema:
+            $ref: '#/definitions/ExplorerLogin'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/Token'
+        404:
+          description: Not Found
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Explorers
+  /explorers/{ExplorerUuid}:
+    get:
+      summary: Information général.
+      description: Retourne les informations général de l'explorer tel que le nombre d'Inox et sa location.
+      security:
+        - ExplorerSecurity: []
+      parameters:
+        - name: ExplorerUuid
+          in: path
+          description: UUID de l'explorer que l'on veut intérogger.
+          required: true
+          type: string
+          format: uuid
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/Explorer'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Explorers
+  /explorers/{ExplorerUuid}/runes:
+    get:
+      summary: Collection de runes de l'explorer.
+      security:
+        - ExplorerSecurity: []
+      description: |
+              Retourne la collection de runes de l'explorer.
+      parameters:
+        - name: ExplorerUuid
+          in: path
+          description: UUID de l'explorer que l'on veut intérogger.
+          required: true
+          type: string
+          format: uuid
+          
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/Runes'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Explorers
+        - Runes
+  /explorers/{ExplorerUuid}/explorations:
+    get:
+      summary: Liste d'explorations réalisées.
+      description: |
+        Retourne la liste des explorations réalisées par l'explorer. La pagination est également supporté avec les queries limit et offset. 20 objets de la liste est retourné par défaut.
+      security:
+        - ExplorerSecurity: []
+      parameters:
+        - name: ExplorerUuid
+          in: path
+          description: UUID de l'explorer que l'on veut intérogger.
+          required: true
+          type: string
+          format: uuid
+          
+        - name: limit
+          in: query
+          description: Query limit permettant de limiter le nombre de résultat reçut. Par défaut 20, minimum 0.
+          required: false
+          type: integer
+        
+        - name: offset
+          in: query
+          description: Query offset permettant d'utiliser la fonctionalité de pagination. La valeur par défaut est 0.
+          required: false
+          type: integer
+        
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Exploration'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Explorers
+        - Explorations
+    post:
+      summary: Rajoute une exploration à un explorer.
+      description: |
+        Rajoute une exploration à un explorer. La localisation de l'explorer change, les runes et les units seront rajoutés à l'explorer.
+      security:
+        - ExplorerSecurity: []
+      parameters:
+        - name: ExplorerUuid
+          in: path
+          description: UUD de l'explorer que l'on veut intérogger.
+          required: true
+          type: string
+          format: uuid
+          
+        - name: body
+          in: body
+          description: Payload contenant les informations nécessaire pour s'authentifier à un explorer.
+          required: true
+          schema:
+            $ref: '#/definitions/PortalPayload'
+      responses:
+        201:
+          description: Created
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Explorers
+        - Explorations
+  /explorers/{ExplorerUuid}/units:
+    get:
+      summary: Liste des units.
+      description: |
+        Retourne la liste des units de l'explorer.
+      security:
+        - ExplorerSecurity: []
+      parameters:
+        - name: ExplorerUuid
+          in: path
+          description: UUID de l'explorer que l'on veut intérogger.
+          required: true
+          type: string
+          format: uuid
+          
+        - name: q
+          in: query
+          description: Nom complet ou partie du nom de units pour faire une recherche par nom.
+          type: string
+          required: false
+          
+        - name: limit
+          in: query
+          description: Query limit permettant de limiter le nombre de résultat reçut. Par défaut 20, minimum 0.
+          type: integer
+          
+        - name: offset
+          in: query
+          description: Query offset permettant d'utiliser la fonctionalité de pagination. La valeur par défaut est 0.
+          type: integer
+          
+        - name: expand
+          in: query
+          description: Query expand faissant l'expansion de données pour le(s) champ(s) spécifié.
+          type: string
+        
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Units'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Explorers
+        - Units
+  /explorers/{ExplorerUuid}/units/{UnitUuid}:
+    get:
+      summary: Détails d'une unit d'un explorer.
+      description: |
+        Retourne les détails d'une unit d'un explorer.
+      security:
+        - ExplorerSecurity: []
+      parameters:
+        - name: ExplorerUuid
+          in: path
+          description: UUID de l'explorer que l'on veut intérogger.
+          type: string
+          format: uuid
+          required: true
+          
+        - name: UnitUuid
+          in: path
+          description: UUID de l'unit que l'on veut les détails.
+          type: string
+          format: uuid
+          required: true
+          
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/Units'
+        401:
+          description: Unauthorized
+        404:
+          description: Not Found
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Explorers
+        - Units
+  /units/search:
+    get:
+      summary: Auto-complétion pour le nom des units.
+      description: Recherche avec auto-complétion des nom d'units recherchés pour une recherche intéractive. Retourne par défaut 20 résultats.
+      parameters:
+        - name: q
+          in: query
+          description: Nom complet ou partie du nom de units à laquel la recherche opère.
+          type: string
+          required: true
+          
+        - name: limit
+          in: query
+          description: Query limit permettant de limiter le nombre de résultat reçut. Par défaut 20, minimum 0.
+          type: integer
+          
+        - name: offset
+          in: query
+          description: Query offset permettant d'utiliser la fonctionalité de pagination. La valeur par défaut est 0.
+          type: integer
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/UnitsGeneric'
+        404:
+          description: Not Found
+        500:
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/Error'
+      tags:
+        - Units
+definitions:
+  Runes:
+    description: Ensemble des runes avec leur quantité. Peut représenté le kernel d'une unit et les runes accumulées par un explorer.
+    type: object
+    required:
+      - air
+      - darkness
+      - earth
+      - energy
+      - fire
+      - light
+      - logic
+      - music
+      - space
+      - toxic
+      - water
+    example:
+      air: 1
+      darkness: 24
+      earth: 245
+      energy: 547
+      fire: 0
+      light: 45
+      logic: 42
+      music: 63146
+      space: 256
+      toxic: 5
+      water: 9
+    properties:
+      air:
+        type: integer
+        minimum: 0
+      darkness:
+        type: integer
+        minimum: 0
+      earth:
+        type: integer
+        minimum: 0
+      energy:
+        type: integer
+        minimum: 0
+      fire:
+        type: integer
+        minimum: 0
+      light:
+        type: integer
+        minimum: 0
+      logic:
+        type: integer
+        minimum: 0
+      music:
+        type: integer
+        minimum: 0
+      space:
+        type: integer
+        minimum: 0
+      toxic:
+        type: integer
+        minimum: 0
+      water:
+        type: integer
+        minimum: 0
+  Moves:
+    description: Move d'une unit.
+    type: object
+    required:
+      - href 
+    example:
+      href: /v1/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/units/41ec3797-4d32-4023-bb3c-80197f8045f6/moves/52ce95cf-83db-46f5-bf8b-c494ddfc6578
+      affinity: 3
+      generic: 2
+      power: 10
+    properties:
+      href: 
+        type: string
+      affinity:
+        type: integer
+      generic:
+        type: integer
+      power:
+        type: integer
+  Units:
+    description: Une unit générée reçut par un explorer.
+    required:
+      - href
+      - name
+    type: object
+    example:
+      href: /v1/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/units/41ec3797-4d32-4023-bb3c-80197f8045f6
+      name: Munmar
+      reflect: 1
+      life: 3
+      speed: 10
+      imageUrl: http://inoxis-andromiabeta.rhcloud.com/images/units/014.gif
+      affinity: darkness
+      kernel:
+        air: 1
+        darkness: 4
+        earth: 3
+        energy: 1
+        fire: 0
+        light: 0
+        logic: 9
+        music: 7
+        space: 0
+        toxic: 0
+        water: 1
+      moves:
+        [
+          {
+            href: /v1/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/units/41ec3797-4d32-4023-bb3c-80197f8045f6/moves/8b7b78e3-5ea7-4390-9205-03238119c811,
+            affinity: 3,
+            power: 3
+          },
+          {
+            href: /v1/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/units/41ec3797-4d32-4023-bb3c-80197f8045f6/moves/52ce95cf-83db-46f5-bf8b-c494ddfc6578,
+            affinity: 3,
+            generic: 2,
+            power: 10
+          }
+        ]
+    properties:
+      name:
+        type: string
+      reflect:
+        type: integer
+      life:
+        type: integer
+      speed:
+        type: integer
+      imageUrl:
+        type: string
+      href:
+        type: string
+      affinity:
+        type: string
+      kernel:
+        $ref: '#/definitions/Runes'
+      moves:
+        type: array
+        items: 
+          $ref: '#/definitions/Moves'
+  UnitsGeneric:
+    description: Une unit générique existante dans le jeu.
+    type: object
+    example:
+      href: /v1/units/573568eb-748b-405b-a585-398989a01e1d
+      name: Munmar
+      reflect: 1
+      life: 3
+      speed: 10
+      imageUrl: http://inoxis-andromiabeta.rhcloud.com/images/units/014.gif
+    required:
+      - href
+      - name
+    properties:
+      name:
+        type: string
+      reflect:
+        type: integer
+      life:
+        type: integer
+      speed:
+        type: integer
+      imageUrl:
+        type: string
+      href:
+        type: string
+  ExplorerCreate:
+    description: Payload pour créer un compte explorer.
+    type: object
+    example:
+      email: andromia@gmail.com
+      password: l33tspeak
+      displayName: andromia
+    required:
+      - email
+      - password
+      - displayName
+    properties:
+      email:
+        type: string
+        format: email
+        description: Email du propriétaire de l'explorer.
+        example: andromia@gmail.com
+      password:
+        type: string
+        format: password
+        description: Mot de passe de l'explorer.
+      displayName:
+        type: string
+        description: Le nom de l'explorer tel qu'affiché publiquement.
+  ExplorerLogin:
+    description: Payload pour se connecter à un compte explorer.
+    type: object
+    example:
+      email: andromia@gmail.com
+      password: l33tspeak
+    required:
+      - email
+      - password
+    properties:
+      email:
+        type: string
+        format: email
+        description: Email du propriétaire de l'explorer.
+      password:
+        type: string
+        format: password
+        description: Mot de passe de l'explorer.
+  Location:
+    required:
+      - name
+      - href
+    type: object
+    example:
+      href: /v1/locations/5c409c51-a194-4548-952a-c54fe7ca4fa5
+      name: Indigo
+    description: Location dans le jeu où les explorateurs peuvent se rendre.
+    properties:
+      href:
+        type: string
+      name:
+        type: string
+        description: Nom de la location.
+  Exploration:
+    type: object
+    description: Exploration d'un explorer. Contient se que l'explorer a obtenu et où il a voyagé une fois passé par un portail.
+    example:
+      href: /v1/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/explorations/2af77069-a9bb-40f6-8104-8487790b34d7
+      dateExploration: 2016-11-08T15:35:48.711Z
+      locations:
+        start:
+          href: /v1/locations/84e4f6f7-757a-42c8-9eac-8c7ac028875c
+          name: Deux-Étoiles
+        end:
+          href: /v1/locations/5c409c51-a194-4548-952a-c54fe7ca4fa5
+          name: Indigo
+      runes: {}
+      unit: {}
+    required:
+      - href
+    properties:
+      href:
+        type: string
+      dateExploration:
+        type: string
+        format: dateTime
+      locations:
+        type: object
+        required:
+          - start
+          - end
+        properties:
+          start:
+            $ref: '#/definitions/Location'
+          end:
+            $ref: '#/definitions/Location'
+      runes:
+        $ref: '#/definitions/Runes'
+      units:
+        $ref: '#/definitions/Units'
+  PortalPayload:
+    type: object
+    description: Payload envoyé au serveur pour rajouter une exploration à un explorer une fois un portail scanné.
+    example:
+      href: /v1/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/explorations/2af77069-a9bb-40f6-8104-8487790b34d7
+      dateExploration: 2016-11-08T15:35:48.711Z
+      locations:
+        start:
+          href: /v1/locations/84e4f6f7-757a-42c8-9eac-8c7ac028875c
+          name: Deux-Étoiles
+        end:
+          href: /v1/locations/5c409c51-a194-4548-952a-c54fe7ca4fa5
+          name: Indigo
+      runes: {}
+      unit: {}
+    required:
+      - href
+      - locations
+      - dateExploration
+    properties:
+      href:
+        type: string
+      dateExploration:
+        type: string
+        format: dateTime
+      locations:
+        type: object
+        required:
+          - start
+          - end
+        properties:
+          start:
+            $ref: '#/definitions/Location'
+          end:
+            $ref: '#/definitions/Location'
+      runes:
+        $ref: '#/definitions/Runes'
+      units:
+        $ref: '#/definitions/Units'
+  Explorer:
+    description: Le compte d'un explorer.
+    required:
+      - href
+    type: object
+    example:
+      href: /v1/explorers/419a6682-ed18-4300-8f09-ecc1a801c607
+      email: andromia@gmail.com
+      displayName: andromia
+      inox: 24505
+      locations:
+        href: /v1/locations/5c409c51-a194-4548-952a-c54fe7ca4fa5
+        name: Indigo
+      units: {
+        [
+          {
+            href: /v1/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/units/41ec3797-4d32-4023-bb3c-80197f8045f6
+          }
+          ]
+      }
+      runes: {
+        href: /v1/explorers/419a6682-ed18-4300-8f09-ecc1a801c607/runes
+      }
+    properties:
+      href:
+        type: string
+        description: Href permettant de faire des requêtes sur l'explorer.
+      email:
+        type: string
+        format: email
+        description: Email du propriétaire de l'explorer.
+      displayName:
+        type: string
+        description: Nom de l'explorer tel qu'affiché publiquement.
+      inox:
+        type: integer
+        description: Montant d'Inox que l'explorer à (0 min).
+      locations:
+        $ref: '#/definitions/Location'
+      runes:
+        $ref: '#/definitions/Runes'
+      explorations:
+        type: array
+        items:
+          $ref: '#/definitions/Exploration'
+      units:
+        type: array
+        items:
+          $ref: '#/definitions/Units'
+  Token:
+    description: Message obtenu après avoir été authentifié à un compte explorer par le service. Contient un token d'authentification et les informations du compte.
+    required:
+      - token
+      - explorer
+    example:
+      token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
+      explorer:
+        href: /v1/explorers/419a6682-ed18-4300-8f09-ecc1a801c607
+        email: andromia@gmail.com
+        displayName: andromia
+        inox: 24505
+        locations:
+          href: /v1/locations/5c409c51-a194-4548-952a-c54fe7ca4fa5
+          name: Indigo
+    type: object
+    properties:
+      token:
+        type: string
+        description: JSON Web Token encodé.
+      explorer:
+        $ref: '#/definitions/Explorer'
+  Error:
+    description: Message d'erreur lorsque le service expérience des problèmes.
+    required:
+      - status
+      - message
+      - developperMessage
+    example:
+      status: 500
+      message: Internal Server Error
+      developperMessage: Une erreur de base de données c'est produit lors de l'insertion de l'explorer. 
+    type: object
+    properties:
+      status:
+        type: integer
+        format: int32
+      message:
+        type: string
+      developperMessage:
+        type: string
